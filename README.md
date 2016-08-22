@@ -118,6 +118,22 @@ RouteInfoManager保存所有的topic和broker信息，Netty服务端接收到请
     private final HashMap<String/* brokerAddr */, List<String>/* Filter Server */> filterServerTable;
     
     //...
+    
+    /**
+      * 注册新的Broker，将新的Broker添加到brokderAddrTable等信息中
+      */
+    public RegisterBrokerResult registerBroker(...) {
+      //...
+      //更新Broker集群信息
+      this.clusterAddrTable.put(clusterName, brokerNames);
+      //更新Broker地址信息
+      this.brokerAddrTable.put(brokerName, brokerData);
+      //更新Broker状态信息
+      this.brokerLiveTable.put(...);
+      //更新Broker过滤信息
+      this.filterServerTable.put(brokerAddr, filterServerList);
+      //...
+    }
   }
 ```
 ### BrokerHouseKeepingService
