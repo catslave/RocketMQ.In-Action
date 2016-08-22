@@ -5,6 +5,8 @@ Name Server 主要负责管理集群中所有的Topic队列信息和Broker地址
 
 NamesrvStartup为Name Server的启动类，NamesrvStartup通过加装默认配置文件，实例化NamesrvController控制器类来执行Name Server操作。NamesrvController根据配置文件创建Netty服务端用于监听客户端的请求，Netty服务端调用DefaultRequestProcessor来处理客户端的请求，DefaultRequestProcessor根据消息类型做出相应的操作更新RouteInfoManager。
 
+![](https://github.com/yjjhebe/RocketMQ.In-Action/blob/master/images/NameServer.png)
+
 ## NamesrvStartup
 启动Name Server，通过调用NamesrvStartup类的main方法进行创建，该类首先加载系统默认配置文件，NamesrvConfig和NettyServerConfig，顾名思义NamesrcConfig就是Name Server相关的配置信息，例如rocketmq的home目录等，NettyServerConfig就是启动Netty服务端时的相关配置信息，例如监听端口、工作线程池数、服务端发送接收缓存池的大小等。RocketMQ是使用Netty作为底层RPC通信框架的。所以Name Server实际是启动了一个Netty服务端来监听消息，同时通过向Netty注册监听处理程序来处理消息的请求。
 ```Java
@@ -40,9 +42,12 @@ public class NamesrvStartup {
 ```
 ## NamesrvController
 NamesrvController是NamesrvStartup的控制器类，在这里创建了Netty服务端用于接收客户端的消息请求，并向Netty注册的消息请求处理程序，Netty服务端接收到消息请求后，调用消息请求处理程序处理消息请求。<br/>
+
 NamesrcStartup创建了NamesrvConfig和NettyServerConfig配置文件后，通过这两个配置文件实例化NamesrvController控制器类，然后调用NamesrvController.initialize方法进行初始化。<br/>
+
 NamesrvController在创建时，实例化了RouteInfoManager和BrokerHouseKeepingService两个对象。Name Server中最重要的就是RouteInfoManager类。
 Name Server所有的Topic和Borker信息都保存在RouteInfoManager中。BrokerHouseKeepingService用于处理Broker状态事件，当Broker失效、异常或者关闭，则将Broker从RouteInfoManager中移除。<br/>
+
 NamesrvController初始化时，根据NettyServerConfig创建了Netty服务端，并向Netty服务端注册了请求处理程序，同时还创建了一个用于处理消息请求的线程池。
 ```Java
 package com.alibaba.rocketmq.namesrv;
