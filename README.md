@@ -342,27 +342,107 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
     }
 }
 ```
-
-### RemotingServer
-NamesrvController还创建了一个remotingExecutor线程池，用于处理Netty服务端接收到消息请求
+`NettyRemotingAbstract`根据请求类型，调用相应的处理程序。NamesrvController在创建NettyRemotingServer时，向NettyRemotingServer注册了默认的处理程序，并且传入了线程池用于处理该程序。`NettyRemotingAbstract`将该请求封装成一个Task，然后使用该线程池执行该Task。
 ```Java
-  //创建了固定大小的线程池，根据nettyServerConfig配置文件提供的默认工作线程数，默认值为8
-  this.remotingExecutor = Executors.newFixedThreadPool(nettyServerConfig.getServerWorkerThreads(), new ThreadFactoryImpl("RemotingExecutorThread_"));
+package com.alibaba.rocketmq.remoting.netty;
+
+/**
+ * Netty服务端公共抽象类
+ * @author shijia.wxr
+ */
+public abstract class NettyRemotingAbstract {
+  //NamesrvController注册的默认处理程序，以及用于执行该处理程序的线程池
+  protected Pair<NettyRequestProcessor, ExecutorService> defaultRequestProcessor;
+  
+  public void processMessageReceived(ChannelHandlerContext ctx, RemotingCommand msg) throws Exception {
+    final RemotingCommand cmd = msg;
+    //判断事件类型
+    switch (cmd.getType()) {
+      case REQUEST_COMMAND://请求事件
+          processRequestCommand(ctx, cmd);
+          break;
+      case RESPONSE_COMMAND://响应事件
+          processResponseCommand(ctx, cmd);
+          break;
+      default:
+          break;
+    }
+  }
+  
+  /**
+   * 请求事件处理程序
+   * @param ctx
+   * @param cmd
+   */
+  public void processRequestCommand(final ChannelHandlerContext ctx, final RemotingCommand cmd) {
+    final Pair<NettyRequestProcessor, ExecutorService> matched = this.processorTable.get(cmd.getCode());
+    //使用默认的请求处理程序
+    final Pair<NettyRequestProcessor, ExecutorService> pair = null == matched ? this.defaultRequestProcessor : matched;
+    
+    //把请求封装成一个Task
+    Runnable run = new Runnable() {
+      @Override
+      public void run() {
+        //...
+        
+        //调用默认的请求处理程序处理请求 DefaultRequestProcessor的processRequest方法
+        final RemotingCommand response = pair.getObject1().processRequest(ctx, cmd);
+        
+        //...
+      }
+    }
+    //将Task任务提交到线程池中执行
+    pair.getObject2().submit(run);
+  }
+}
 ```
 ### DefaultRequestProcessor
-NamesrvController为NettyRemotingServer注册了消息请求处理器DefaultRequestProcessor，当Netty服务端接收到消息请求时，调用remotingExecutor线程池执行DefaultRequestProcessor处理程序，DefaultRequestProcessor根据消息类型来做出相应的处理
+`DefaultRequestProcessor`为默认的请求处理程序，Netty服务端接收到所有请求，都会交由其处理。`DefaultRequestProcessor`在线程池中执行。
+
+NamesrvController为NettyRemotingServer注册了请求处理程序DefaultRequestProcessor，当Netty服务端接收到消息请求时，调用remotingExecutor线程池执行DefaultRequestProcessor处理程序，DefaultRequestProcessor根据消息类型来做出相应的处理。
 ```Java
-  //为netty注册了默认的处理程序，DefaultRequestProcessor，以及用于执行该处理程序的线程池remotingExecutor
-  this.remotingServer.registerDefaultProcessor(new DefaultRequestProcessor(this), this.remotingExecutor);
-```
-## DefaultRequestProcessor
-DefaultRequestProcessor实际处理消息请求的类，请求的消息类型有：TOPIC，BROKER等。
-```Java
-  switch (request.getCode()) {
-    case RequestCode.REGISTER_BROKER:
-    case RequestCode.UNREGISTER_BROKER:
-    case RequestCode.GET_ROUTEINTO_BY_TOPIC:
-    case RequestCode.GET_ALL_TOPIC_LIST_FROM_NAMESERVER:
+package com.alibaba.rocketmq.namesrv.processor;
+
+/**
+  * 默认请求处理程序
+  */
+public class DefaultRequestProcessor implements NettyRequestProcessor {
+  
+  /**
+   * 处理请求
+   * @param ctx 管道
+   * @param request 请求消息
+   * @return 响应消息
+   * @throws RemotingCommandException
+   */
+  @Override
+  public RemotingCommand processRequest(ChannelHandlerContext ctx, RemotingCommand request) throws RemotingCommandException {
+    //...
+    //根据请求消息类型
+    switch (request.getCode()) {
+    case RequestCode.REGISTER_BROKER://注册新Broker
+      return this.registerBroker(ctx, request);
+    case RequestCode.UNREGISTER_BROKER://移除Broker
+      return this.unregisterBroker(ctx, request);
+    //...
+    default:
+      break;
+    }
+    return null;
   }
+  
+  /**
+   * 注册新Broker
+   * @param ctx
+   * @param request
+   * @return
+   * @throws RemotingCommandException
+   */
+  public RemotingCommand registerBroker(ChannelHandlerContext ctx, RemotingCommand request) throws RemotingCommandException {
+    //...
+    //通过调用RouteInfoManager的registerBroker方法来注册新的Broker
+    this.namesrvController.getRouteInfoManager().registerBroker(...);
+    //...
+  }
+}
 ```
-根据不同的消息类型，操作RouteInfoManager管理的相应HashMap。
