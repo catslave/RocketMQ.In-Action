@@ -9,6 +9,7 @@ The Introduction Of RocketMQ.
 
 # Name Server
 Name Server 主要负责管理集群中所有的Topic队列信息和Broker地址信息，客户端可以通过Name Server获取topic信息，通过topic获取broker信息，通过broker获取broker地址信息等等。<br/>
+
 NamesrvStartup为Name Server的启动类，NamesrvStartup通过加装默认配置文件，实例化NamesrvController控制器类来执行Name Server操作。NamesrvController根据配置文件创建Netty服务端用于监听客户端的请求，Netty服务端调用DefaultRequestProcessor来处理客户端的请求，DefaultRequestProcessor根据消息类型做出相应的操作更新RouteInfoManager。
 
 ## NamesrvStartup
@@ -296,6 +297,52 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
   
 }
 ```
+Netty启动时，向pipeline管道添加了两个自定义的ChannelHandler，一个是`NettyConnnetManageHandler`，一个是`NettyServerHandler`。
+
+上文有提到Netty专门启动了一个线程NettyEventExecuter，用于监听（管道断开、异常或关闭时触发的事件）事件队列的。NettyEventExecuter线程还提供了一个putNettyEvent方法用于添加事件到队列中。那么这个方法由谁来调用呢？就是NettyConnetManageHanlder处理程序来调用的。
+
+`NettyConnetManageHandler`继承于ChannelDuplexHandler，并且实现了channelInactive、userEventTriggered、exceptionCaught等方法。当有管道失效时，会自动触发channelInactive方法，然后在这个方法里面调用nettyEventExecuter.putNettyEvent(event)方法，将事件添加到事件队列中。
+```Java
+package com.alibaba.rocketmq.remoting.netty;
+
+/**
+ * Netty 服务端
+ */
+public class NettyRemotingServer extends NettyRemotingAbstract implements RemotingServer {
+  //...
+  
+  class NettyConnetManageHandler extends ChannelDuplexHandler {
+    //...
+    
+   @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+      //获取客户端远程地址
+      final String remoteAddress = RemotingHelper.parseChannelRemoteAddr(ctx.channel());
+      //创建一个NettyEvent事件，标记该事件类型为CLOSE，然后将该事件添加到nettyEventExecuter的eventQueue队列中
+      NettyRemotingServer.this.putNettyEvent(new NettyEvent(NettyEventType.CLOSE, remoteAddress.toString(), ctx.channel()));
+  }
+}
+```
+`NettyServerHandler`用于处理请求信息，继承于SimpleChannelInboundHandler，并且实现了channelRead0方法。
+```Java
+package com.alibaba.rocketmq.remoting.netty;
+
+/**
+ * Netty 服务端
+ */
+public class NettyRemotingServer extends NettyRemotingAbstract implements RemotingServer {
+  //...
+  
+  class NettyServerHandler extends SimpleChannelInboundHandler<RemotingCommand> {
+    
+    @Override
+    protected void channelRead0(ChannelHandlerContext ctx, RemotingCommand msg) throws Exception {
+      //调用NettyRemoteAbstract的processMessageReceived方法来处理请求
+      processMessageReceived(ctx, msg);
+    }
+}
+```
+
 ### RemotingServer
 NamesrvController还创建了一个remotingExecutor线程池，用于处理Netty服务端接收到消息请求
 ```Java
