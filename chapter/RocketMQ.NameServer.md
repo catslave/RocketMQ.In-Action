@@ -1,13 +1,6 @@
-# RocketMQ.In-Action
-What is RocketMQ? 
-Why use RocketMQ?
-What is NameServer?
-What is Broker?
-How Producer does work?
-How Consumer does work?<br/>
-The Introduction Of RocketMQ.
+# RocketMQ.NameServer
 
-# Name Server
+## Name Server
 Name Server 主要负责管理集群中所有的Topic队列信息和Broker地址信息，客户端可以通过Name Server获取topic信息，通过topic获取broker信息，通过broker获取broker地址信息等等。<br/>
 
 NamesrvStartup为Name Server的启动类，NamesrvStartup通过加装默认配置文件，实例化NamesrvController控制器类来执行Name Server操作。NamesrvController根据配置文件创建Netty服务端用于监听客户端的请求，Netty服务端调用DefaultRequestProcessor来处理客户端的请求，DefaultRequestProcessor根据消息类型做出相应的操作更新RouteInfoManager。
