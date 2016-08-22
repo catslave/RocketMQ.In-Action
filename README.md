@@ -6,7 +6,7 @@ What is Broker?
 How Producer does work?
 How Consumer does work?<br/>
 
-# The Introduction Of RocketMQ.
+# The Introduction Of RocketMQ
 * [RocketMQ.NameServer](https://github.com/yjjhebe/RocketMQ.In-Action/blob/master/chapter/RocketMQ.NameServer.md)
 * [RocketMQ.Producer](https://github.com/yjjhebe/RocketMQ.In-Action/blob/master/chapter/RocketMQ.Producer.md)
 * [RocketMQ.Consumer](https://github.com/yjjhebe/RocketMQ.In-Action/blob/master/chapter/RocketMQ.Consumer.md)
