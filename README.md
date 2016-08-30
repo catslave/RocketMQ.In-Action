@@ -12,4 +12,4 @@ How Consumer does work?<br/>
 * [RocketMQ.Consumer](https://catslave.github.io/rocketmq/2016/08/18/RocketMQ.Consumer.html)
 * [RocketMQ.Broker](https://catslave.github.io/rocketmq/2016/08/26/RocketMQ.Broker.html)
 * [RocketMQ.Remoting](https://catslave.github.io/rocketmq/2016/08/28/RocketMQ.Remoting.html)
-* [RocketMQ.Store](https://catslave.github.io/rocketmq/2016/08/28/RocketMQ.Store.html)
+* [RocketMQ.Store](https://catslave.github.io/rocketmq/2016/08/29/RocketMQ.Store.html)
